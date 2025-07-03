@@ -1,14 +1,82 @@
 // components/Navbar.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import styles from '../styles/Navbar.module.scss';
 
 export default function Navbar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/repos/search?q=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.repositories || []);
+        setShowResults(true);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    // Debounce search
+    setTimeout(() => {
+      if (value === searchQuery) {
+        handleSearch(value);
+      }
+    }, 300);
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch(searchQuery);
+    }
+  };
+
+  const handleResultClick = (repoId: string) => {
+    router.push(`/repos/${repoId}`);
+    setShowResults(false);
+    setSearchQuery('');
+  };
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <nav className={styles.navbar}>
@@ -23,18 +91,50 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
         </div>
 
         <div className={styles.navCenter}>
-          <div className={styles.searchContainer}>
+          <div className={styles.searchContainer} ref={searchRef}>
             <input 
               type="text" 
               placeholder="Search repositories..." 
               className={styles.searchInput}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyPress={handleSearchKeyPress}
             />
             <div className={styles.searchIcon}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
+              {isSearching ? (
+                <div className={styles.spinner}>⟳</div>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              )}
             </div>
+            
+            {/* Search Results Dropdown */}
+            {showResults && (
+              <div className={styles.searchResults}>
+                {searchResults.length > 0 ? (
+                  searchResults.map((repo) => (
+                    <div 
+                      key={repo.id} 
+                      className={styles.searchResult}
+                      onClick={() => handleResultClick(repo.id)}
+                    >
+                      <div className={styles.repoInfo}>
+                        <div className={styles.repoName}>{repo.name}</div>
+                        <div className={styles.repoOwner}>by {repo.owner?.name || 'Unknown'}</div>
+                        {repo.description && (
+                          <div className={styles.repoDescription}>{repo.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.noResults}>No repositories found</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
