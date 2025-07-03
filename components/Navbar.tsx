@@ -28,6 +28,11 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
     }
   }, [userEmail, router.asPath]);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [router.asPath]);
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -86,6 +91,11 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
       setProfileError(data.message || 'Failed to update profile');
     }
     setSaving(false);
+  };
+
+  // Close menu when a mobile link is clicked
+  const handleMobileLinkClick = () => {
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -198,7 +208,9 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
           <button 
             className={styles.mobileMenuBtn}
             onClick={toggleMobileMenu}
-            aria-label="Toggle mobile menu"
+            aria-label={isMobileMenuOpen ? 'Close mobile menu' : 'Open mobile menu'}
+            aria-expanded={isMobileMenuOpen}
+            style={{ zIndex: 3000, position: 'relative' }}
           >
             <div className={`${styles.hamburger} ${isMobileMenuOpen ? styles.hamburgerOpen : ''}`}>
               <span></span>
@@ -211,8 +223,8 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className={styles.mobileOverlay} onClick={toggleMobileMenu}>
-          <div className={styles.mobileMenu} onClick={e => e.stopPropagation()}>
+        <div className={styles.mobileOverlay} onClick={toggleMobileMenu} style={{ zIndex: 2999 }}>
+          <div className={styles.mobileMenu} onClick={e => e.stopPropagation()} style={{ zIndex: 3001 }}>
             <div className={styles.mobileMenuHeader}>
               <span className={styles.mobileMenuTitle}>Navigation</span>
               <button 
@@ -228,15 +240,15 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
             </div>
             
             <div className={styles.mobileMenuContent}>
-              <Link href="/" className={styles.mobileNavLink} onClick={toggleMobileMenu}>
+              <Link href="/" className={styles.mobileNavLink} onClick={handleMobileLinkClick}>
                 <span className={styles.mobileNavIcon}>🏠</span>
                 Home
               </Link>
-              <Link href="/dashboard" className={styles.mobileNavLink} onClick={toggleMobileMenu}>
+              <Link href="/dashboard" className={styles.mobileNavLink} onClick={handleMobileLinkClick}>
                 <span className={styles.mobileNavIcon}>📊</span>
                 Dashboard
               </Link>
-              <Link href="/explore" className={styles.mobileNavLink} onClick={toggleMobileMenu}>
+              <Link href="/explore" className={styles.mobileNavLink} onClick={handleMobileLinkClick}>
                 <span className={styles.mobileNavIcon}>🔍</span>
                 Explore
               </Link>
@@ -249,17 +261,17 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
                     </div>
                     <span className={styles.mobileUserEmail}>{userEmail}</span>
                   </div>
-                  <button onClick={onLogout} className={styles.mobileLogoutBtn}>
+                  <button onClick={() => { onLogout(); handleMobileLinkClick(); }} className={styles.mobileLogoutBtn}>
                     <span className={styles.mobileNavIcon}>🚪</span>
                     Logout
                   </button>
                 </div>
               ) : (
                 <div className={styles.mobileAuthButtons}>
-                  <Link href="/login" className={styles.mobileBtnSecondary} onClick={toggleMobileMenu}>
+                  <Link href="/login" className={styles.mobileBtnSecondary} onClick={handleMobileLinkClick}>
                     Sign In
                   </Link>
-                  <Link href="/register" className={styles.mobileBtnPrimary} onClick={toggleMobileMenu}>
+                  <Link href="/register" className={styles.mobileBtnPrimary} onClick={handleMobileLinkClick}>
                     Sign Up
                   </Link>
                 </div>
