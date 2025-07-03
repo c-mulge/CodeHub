@@ -2,12 +2,21 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import styles from '../styles/Navbar.module.scss';
+import { useRouter } from 'next/router';
 
 export default function Navbar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const router = useRouter();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchValue.trim()) {
+      router.push(`/explore?query=${encodeURIComponent(searchValue.trim())}`);
+    }
   };
 
   return (
@@ -28,6 +37,9 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
               type="text" 
               placeholder="Search repositories..." 
               className={styles.searchInput}
+              value={searchValue}
+              onChange={e => setSearchValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
             <div className={styles.searchIcon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
