@@ -2,8 +2,11 @@
 import React from 'react';
 import Link from 'next/link';
 import styles from '../styles/Home.module.scss';
+import { useSession } from 'next-auth/react';
 
 export default function Home() {
+  const { status } = useSession();
+  const isLoggedIn = status === 'authenticated';
   return (
     <div className={styles.hero}>
       <div className={styles.backgroundElements}>
@@ -61,15 +64,17 @@ export default function Home() {
             </div>
           </div>
           
-          <div className={styles.buttons}>
-            <Link href="/register" className={styles.btnPrimary}>
-              <span className={styles.btnText}>Get Started</span>
-              <span className={styles.btnIcon}>→</span>
-            </Link>
-            <Link href="/login" className={styles.btnSecondary}>
-              <span className={styles.btnText}>Sign In</span>
-            </Link>
-          </div>
+          {!isLoggedIn && (
+            <div className={styles.buttons}>
+              <Link href="/register" className={styles.btnPrimary}>
+                <span className={styles.btnText}>Get Started</span>
+                <span className={styles.btnIcon}>→</span>
+              </Link>
+              <Link href="/login" className={styles.btnSecondary}>
+                <span className={styles.btnText}>Sign In</span>
+              </Link>
+            </div>
+          )}
           
           <div className={styles.stats}>
             <div className={styles.stat}>

@@ -1,0 +1,62 @@
+.terminalPage {
+    min-height: 100vh;
+    background: #0f0f23;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00ffae;
+    font-family: 'Fira Code', monospace;
+    padding: 2rem;
+  }
+  
+  .terminal {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    backdrop-filter: blur(8px);
+  }
+  
+  .glitchText {
+    font-size: 2.5rem;
+    font-weight: bold;
+    animation: glitch 1s infinite;
+  }
+  
+  @keyframes glitch {
+    0% { text-shadow: 2px 0 red, -2px 0 blue; }
+    25% { text-shadow: -2px 0 green, 2px 0 purple; }
+    50% { text-shadow: 2px 0 blue, -2px 0 red; }
+    75% { text-shadow: -2px 0 purple, 2px 0 green; }
+    100% { text-shadow: 2px 0 red, -2px 0 blue; }
+  }
+  
+  .cursor {
+    display: inline-block;
+    margin-left: 5px;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+  
+  .linkWrapper {
+    margin-top: 2rem;
+  }
+  
+  .homeButton {
+    display: inline-block;
+    background: #00ffae;
+    color: #0f0f23;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: background 0.2s ease;
+  }
+  
+  .homeButton:hover {
+    background: #00e69b;
+  }
+  
