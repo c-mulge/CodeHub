@@ -1,0 +1,564 @@
+// public.module.scss
+
+.dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 50%, #2d1b69 100%);
+  position: relative;
+  overflow: hidden;
+  color: white;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 20% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+  }
+}
+
+.backgroundElements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.gridPattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+.container {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.header {
+  margin-bottom: 3rem;
+  
+  .backButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .backIcon {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .repoHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    
+    .repoIcon {
+      font-size: 3rem;
+      filter: drop-shadow(0 4px 8px rgba(78, 205, 196, 0.3));
+    }
+    
+    .repoInfo {
+      flex: 1;
+      
+      .repoName {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 0.5rem 0;
+        animation: gradientShift 4s ease-in-out infinite;
+      }
+      
+      .repoDescription {
+        font-size: 1.25rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0 0 1rem 0;
+        line-height: 1.6;
+      }
+      
+      .repoMeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        
+        .createdDate {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+        }
+        
+        .publicBadge {
+          padding: 6px 12px;
+          background: rgba(46, 204, 113, 0.2);
+          border: 1px solid rgba(46, 204, 113, 0.3);
+          border-radius: 16px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: #2ecc71;
+        }
+      }
+    }
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.mainContent {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.uploadCard, .statsCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .cardHeader {
+    margin-bottom: 1.5rem;
+    
+    .cardTitle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      
+      .titleIcon {
+        font-size: 1.25rem;
+      }
+    }
+    
+    .cardDescription {
+      color: rgba(255, 255, 255, 0.7);
+      margin: 0;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+.dropZone {
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &:hover, &.dragOver {
+    border-color: #4ecdc4;
+    background: rgba(78, 205, 196, 0.05);
+    transform: translateY(-2px);
+  }
+  
+  .dropZoneContent {
+    .uploadIcon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+    
+    .dropTitle {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      color: white;
+    }
+    
+    .dropSubtitle {
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0 0 1.5rem 0;
+      font-size: 0.9rem;
+    }
+    
+    .browseButton {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      }
+    }
+  }
+  
+  .fileInput {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.fileList {
+  margin-top: 2rem;
+  
+  .fileListHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    .fileListTitle {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+      color: #4ecdc4;
+    }
+    
+    .clearAllButton {
+      padding: 8px 16px;
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      border-radius: 6px;
+      color: #e74c3c;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      
+      &:hover:not(:disabled) {
+        background: rgba(231, 76, 60, 0.3);
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+  
+  .fileItems {
+    max-height: 300px;
+    overflow-y: auto;
+    
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+    }
+  }
+  
+  .fileItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .fileIcon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    
+    .fileDetails {
+      flex: 1;
+      min-width: 0;
+      
+      .fileName {
+        font-weight: 500;
+        color: white;
+        margin-bottom: 0.25rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .fileSize {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      
+      .progressBar {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+        
+        .progressFill {
+          height: 100%;
+          background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+          transition: width 0.3s ease;
+        }
+      }
+    }
+    
+    .fileActions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      .fileStatus {
+        font-size: 1.2rem;
+        
+        &.pending { opacity: 0.7; }
+        &.uploading { animation: pulse 1s infinite; }
+        &.success { color: #2ecc71; }
+        &.error { color: #e74c3c; }
+      }
+      
+      .removeButton {
+        padding: 4px 8px;
+        background: rgba(231, 76, 60, 0.2);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+        border-radius: 4px;
+        color: #e74c3c;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: rgba(231, 76, 60, 0.3);
+        }
+      }
+    }
+  }
+  
+  .uploadActions {
+    margin-top: 1.5rem;
+    text-align: center;
+    
+    .uploadButton {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+      }
+      
+      &:hover:not(:disabled)::before {
+        left: 100%;
+      }
+      
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+      }
+      
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .uploadIcon {
+        font-size: 1.1rem;
+      }
+      
+      .uploadingSpinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.statsCard {
+  .statsGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    
+    .statItem {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+      
+      .statValue {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #4ecdc4;
+        margin-bottom: 0.5rem;
+      }
+      
+      .statLabel {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: white;
+  font-size: 1.25rem;
+  
+  .loaderSpinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #4ecdc4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 1rem;
+  }
+}
+
+.errorState {
+  text-align: center;
+  padding: 4rem 2rem;
+  
+  .errorIcon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+  }
+  
+  .errorTitle {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #e74c3c;
+  }
+  
+  .errorMessage {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 2rem 0;
+    line-height: 1.6;
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 50%, #2d1b69 100%);
+  color: white;
+  font-size: 1.25rem;
+}
+

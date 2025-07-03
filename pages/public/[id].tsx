@@ -1,216 +1,339 @@
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import styles from '../../styles/public.module.scss';
+
+interface RepoType {
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
+interface FileItem {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  progress: number;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+}
 
 export default function PublicRepo() {
   const router = useRouter();
   const { id } = router.query;
-  const [repo, setRepo] = useState<any>(null);
-  const [files, setFiles] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [repo, setRepo] = useState<RepoType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [viewingFile, setViewingFile] = useState<any>(null);
-  const [viewingContent, setViewingContent] = useState('');
-  const [viewingLoading, setViewingLoading] = useState(false);
-  const [viewingError, setViewingError] = useState('');
-  const [filePage, setFilePage] = useState(1);
-  const filesPerPage = 10;
-  const totalFilePages = Math.ceil(files.length / filesPerPage);
-  const paginatedFiles = files.slice((filePage - 1) * filesPerPage, filePage * filesPerPage);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const codeMimeTypes = [
-    'text/plain',
-    'text/x-c',
-    'text/x-c++',
-    'text/x-java',
-    'text/x-python',
-    'application/javascript',
-    'application/json',
-    'text/html',
-    'text/css',
-    'text/markdown',
-    'application/xml',
-    'text/x-sh',
-    'text/x-typescript',
-    'text/x-go',
-    'text/x-ruby',
-    'text/x-php',
-    'text/x-csharp',
-    'text/x-scala',
-    'text/x-swift',
-    'text/x-kotlin',
-  ];
-
-  useEffect(() => {
-    if (id) {
-      fetchRepo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  useEffect(() => { if (id) fetchRepo(); }, [id]);
 
   const fetchRepo = async () => {
-    setLoading(true);
-    setError('');
     try {
+      setLoading(true);
+      setError('');
       const res = await fetch(`/api/public/${id}`);
       const data = await res.json();
-      if (res.ok) {
-        setRepo(data.repo);
-        setFiles(data.files);
-      } else {
-        setError(data.message || 'Not found');
-      }
-    } catch (err) {
-      setError('Not found');
+      if (res.ok) setRepo(data.repo);
+      else setError(data.message || 'Repository not found');
+    } catch {
+      setError('Repository not found');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleViewFile = async (f: any) => {
-    setViewingFile(f);
-    setViewingContent('');
-    setViewingError('');
-    setViewingLoading(true);
-    try {
-      const res = await fetch(`/uploads/${id}/${f.filename}`);
-      if (!res.ok) throw new Error('Failed to fetch file');
-      const text = await res.text();
-      setViewingContent(text);
-    } catch (err) {
-      setViewingError('Failed to load file');
-    } finally {
-      setViewingLoading(false);
+  const handleFileSelect = (selectedFiles: FileList) => {
+    const newFiles: FileItem[] = Array.from(selectedFiles).map((file, index) => ({
+      id: `${Date.now()}-${index}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      progress: 0,
+      status: 'pending'
+    }));
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files) {
+      handleFileSelect(e.dataTransfer.files);
     }
   };
 
-  function getFileIcon(filename: string) {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    if (!ext) return '📄';
-    if (["js","ts","jsx","tsx","py","java","c","cpp","h","cs","go","rb","php","html","css","json","md","sh","xml","swift","kt","scala"].includes(ext)) return '📝';
-    if (["png","jpg","jpeg","gif","bmp","svg","webp"].includes(ext)) return '🖼️';
-    if (["zip","rar","7z","tar","gz"].includes(ext)) return '📦';
-    if (["pdf"].includes(ext)) return '📕';
-    if (["mp3","wav","ogg"].includes(ext)) return '🎵';
-    if (["mp4","mov","avi","mkv"].includes(ext)) return '🎬';
-    return '📄';
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFileSelect(e.target.files);
+    }
+  };
+
+  const removeFile = (fileId: string) => {
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type.startsWith('video/')) return '🎥';
+    if (type.startsWith('audio/')) return '🎵';
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('text')) return '📝';
+    if (type.includes('zip') || type.includes('rar')) return '📦';
+    return '📎';
+  };
+
+  const simulateUpload = async () => {
+    if (files.length === 0) return;
+    
+    setUploading(true);
+    
+    for (const file of files) {
+      setFiles(prev => prev.map(f => 
+        f.id === file.id ? { ...f, status: 'uploading' } : f
+      ));
+
+      // Simulate upload progress
+      for (let progress = 0; progress <= 100; progress += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setFiles(prev => prev.map(f => 
+          f.id === file.id ? { ...f, progress } : f
+        ));
+      }
+
+      setFiles(prev => prev.map(f => 
+        f.id === file.id ? { ...f, status: 'success' } : f
+      ));
+    }
+    
+    setUploading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.dashboard}>
+        <div className={styles.backgroundElements}>
+          <div className={styles.gridPattern}></div>
+        </div>
+        <div className={styles.loader}>
+          <div className={styles.loaderSpinner}></div>
+          <span>Loading repository...</span>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>;
+  if (error) {
+    return (
+      <div className={styles.dashboard}>
+        <div className={styles.backgroundElements}>
+          <div className={styles.gridPattern}></div>
+        </div>
+        <div className={styles.container}>
+          <div className={styles.errorState}>
+            <div className={styles.errorIcon}>⚠️</div>
+            <h2 className={styles.errorTitle}>Repository Not Found</h2>
+            <p className={styles.errorMessage}>{error}</p>
+            <Link href="/dashboard" className={styles.backButton}>
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!repo) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-2 sm:p-4">
-      <div className="w-full max-w-xl bg-white dark:bg-gray-800 p-2 sm:p-6 rounded shadow overflow-x-auto">
-        <div className="mb-4">
-          <Link href="/" className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded font-medium shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition">← Back to Home</Link>
-        </div>
-        <nav className="mb-4 text-sm text-gray-500" aria-label="Breadcrumb">
-          <ol className="list-reset flex">
-            <li>
-              <Link href="/" className="hover:underline">Home</Link>
-              <span className="mx-2">/</span>
-            </li>
-            <li>
-              <Link href="/" className="hover:underline">Public Repo</Link>
-              <span className="mx-2">/</span>
-            </li>
-            <li className="text-gray-700 font-semibold">{repo.name}</li>
-          </ol>
-        </nav>
-        <h1 className="text-2xl font-bold mb-2">{repo.name}</h1>
-        <div className="mb-2 text-gray-700">{repo.description}</div>
-        <div className="mb-4 text-xs text-gray-400">Created: {new Date(repo.createdAt).toLocaleString()}</div>
-        <div className="mb-4 text-xs px-2 py-1 rounded bg-green-100 text-green-700 inline-block">Public</div>
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-2">Files</h2>
-          {files.length === 0 ? (
-            <div>No files uploaded yet.</div>
-          ) : (
-            <ul>
-              {paginatedFiles.map(f => {
-                const isCode = codeMimeTypes.includes(f.mimetype) || (f.originalname && /\.(js|ts|jsx|tsx|py|java|c|cpp|h|cs|go|rb|php|html|css|json|md|sh|xml|swift|kt|scala)$/i.test(f.originalname));
-                return (
-                  <li key={f._id} className="mb-2 flex items-center">
-                    <span className="mr-2 text-xl">{getFileIcon(f.originalname)}</span>
-                    <a
-                      href={`/uploads/${id}/${f.filename}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {f.originalname}
-                    </a>
-                    <span className="ml-2 text-xs text-gray-500">({f.mimetype}, {Math.round(f.size / 1024)} KB)</span>
-                    <a
-                      href={`/uploads/${id}/${f.filename}`}
-                      download={f.originalname}
-                      className="ml-2 px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs font-medium shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                      title="Download file"
-                    >
-                      Download
-                    </a>
-                    {isCode && (
-                      <button
-                        onClick={() => handleViewFile(f)}
-                        className="ml-2 px-2 py-1 bg-green-500 text-white rounded text-xs font-medium shadow hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                        disabled={viewingLoading && viewingFile?._id === f._id}
-                        title="View file"
-                      >
-                        View
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {totalFilePages > 1 && (
-            <div className="flex justify-center mt-2 gap-2">
-              <button
-                onClick={() => setFilePage(p => Math.max(1, p - 1))}
-                disabled={filePage === 1}
-                className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <span className="px-2">Page {filePage} of {totalFilePages}</span>
-              <button
-                onClick={() => setFilePage(p => Math.min(totalFilePages, p + 1))}
-                disabled={filePage === totalFilePages}
-                className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-              >
-                Next
-              </button>
+    <div className={styles.dashboard}>
+      <div className={styles.backgroundElements}>
+        <div className={styles.gridPattern}></div>
+      </div>
+      
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <Link href="/dashboard" className={styles.backButton}>
+            <span className={styles.backIcon}>←</span>
+            Back to Dashboard
+          </Link>
+          
+          <div className={styles.repoHeader}>
+            <div className={styles.repoIcon}>📁</div>
+            <div className={styles.repoInfo}>
+              <h1 className={styles.repoName}>{repo.name}</h1>
+              <p className={styles.repoDescription}>{repo.description}</p>
+              <div className={styles.repoMeta}>
+                <span className={styles.createdDate}>
+                  📅 Created: {new Date(repo.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+                <span className={styles.publicBadge}>🌐 Public</span>
+              </div>
             </div>
-          )}
-          {/* Inline code viewer */}
-          {viewingFile && (
-            <div className="mt-6 w-full">
-              <div className="flex items-center mb-2">
-                <span className="font-semibold">Viewing:</span>
-                <span className="ml-2 text-blue-700">{viewingFile.originalname}</span>
-                <button
-                  className="ml-4 px-2 py-1 bg-gray-300 rounded text-xs"
-                  onClick={() => { setViewingFile(null); setViewingContent(''); }}
-                >
-                  Close
+          </div>
+        </div>
+
+        <div className={styles.mainContent}>
+          <div className={styles.uploadCard}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <span className={styles.titleIcon}>📤</span>
+                Upload Files
+              </h2>
+              <p className={styles.cardDescription}>
+                Drag and drop files or click to browse
+              </p>
+            </div>
+
+            <div 
+              className={`${styles.dropZone} ${dragOver ? styles.dragOver : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className={styles.dropZoneContent}>
+                <div className={styles.uploadIcon}>☁️</div>
+                <h3 className={styles.dropTitle}>
+                  {dragOver ? 'Drop files here' : 'Choose files to upload'}
+                </h3>
+                <p className={styles.dropSubtitle}>
+                  Support for multiple files up to 100MB each
+                </p>
+                <button className={styles.browseButton}>
+                  Browse Files
                 </button>
               </div>
-              {viewingLoading ? (
-                <div>Loading...</div>
-              ) : viewingError ? (
-                <div className="text-red-600">{viewingError}</div>
-              ) : (
-                <SyntaxHighlighter language={viewingFile.originalname.split('.').pop() || ''} style={vscDarkPlus} showLineNumbers>
-                  {viewingContent}
-                </SyntaxHighlighter>
-              )}
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleInputChange}
+                className={styles.fileInput}
+              />
             </div>
-          )}
+
+            {files.length > 0 && (
+              <div className={styles.fileList}>
+                <div className={styles.fileListHeader}>
+                  <h3 className={styles.fileListTitle}>Selected Files ({files.length})</h3>
+                  <button 
+                    className={styles.clearAllButton}
+                    onClick={() => setFiles([])}
+                    disabled={uploading}
+                  >
+                    Clear All
+                  </button>
+                </div>
+                
+                <div className={styles.fileItems}>
+                  {files.map((file) => (
+                    <div key={file.id} className={styles.fileItem}>
+                      <div className={styles.fileIcon}>{getFileIcon(file.type)}</div>
+                      <div className={styles.fileDetails}>
+                        <div className={styles.fileName}>{file.name}</div>
+                        <div className={styles.fileSize}>{formatFileSize(file.size)}</div>
+                        {file.status === 'uploading' && (
+                          <div className={styles.progressBar}>
+                            <div 
+                              className={styles.progressFill}
+                              style={{ width: `${file.progress}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                      <div className={styles.fileActions}>
+                        <span className={`${styles.fileStatus} ${styles[file.status]}`}>
+                          {file.status === 'pending' && '⏳'}
+                          {file.status === 'uploading' && '📤'}
+                          {file.status === 'success' && '✅'}
+                          {file.status === 'error' && '❌'}
+                        </span>
+                        {file.status === 'pending' && (
+                          <button 
+                            className={styles.removeButton}
+                            onClick={() => removeFile(file.id)}
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.uploadActions}>
+                  <button 
+                    className={styles.uploadButton}
+                    onClick={simulateUpload}
+                    disabled={uploading || files.length === 0}
+                  >
+                    {uploading ? (
+                      <>
+                        <span className={styles.uploadingSpinner}></span>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <span className={styles.uploadIcon}>🚀</span>
+                        Upload Files
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.statsCard}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <span className={styles.titleIcon}>📊</span>
+                Repository Stats
+              </h2>
+            </div>
+            <div className={styles.statsGrid}>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>0</div>
+                <div className={styles.statLabel}>Files</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>0 MB</div>
+                <div className={styles.statLabel}>Size</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>0</div>
+                <div className={styles.statLabel}>Downloads</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
