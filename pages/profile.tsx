@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
+import styles from '../styles/profile.module.scss';
 
 export default function Profile() {
   const { status } = useSession();
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [profile, setProfile] = useState({ name: '', email: '', description: '', profilePic: '' });
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -30,8 +29,12 @@ export default function Profile() {
       const res = await fetch('/api/user/me');
       const data = await res.json();
       if (res.ok) {
-        setName(data.name);
-        setEmail(data.email);
+        setProfile({
+          name: data.name || '',
+          email: data.email || '',
+          description: data.description || '',
+          profilePic: data.profilePic || '',
+        });
       } else {
         setError(data.message || 'Failed to fetch profile');
       }
@@ -42,85 +45,122 @@ export default function Profile() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProfilePicFile(e.target.files[0]);
+      setProfile(p => ({ ...p, profilePic: URL.createObjectURL(e.target.files![0]) }));
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError('');
     setSuccess('');
-    try {
-      const res = await fetch('/api/user/update', {
+    let profilePicUrl = profile.profilePic;
+    if (profilePicFile) {
+      const formData = new FormData();
+      formData.append('profilePic', profilePicFile);
+      const res = await fetch('/api/user/upload-profile-pic', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password: password || undefined }),
+        body: formData,
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess('Profile updated successfully!');
-        setPassword('');
+        profilePicUrl = data.url;
       } else {
-        setError(data.message || 'Update failed');
+        setError(data.message || 'Failed to upload profile picture');
+        setSaving(false);
+        return;
       }
-    } catch (err) {
-      setError('Update failed');
-    } finally {
-      setSaving(false);
     }
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: profile.name,
+        description: profile.description,
+        profilePic: profilePicUrl,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSuccess('Profile updated!');
+      setProfilePicFile(null);
+    } else {
+      setError(data.message || 'Failed to update profile');
+    }
+    setSaving(false);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className={styles.loading}>Loading...</div>;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-2 sm:p-4">
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded shadow">
-        <div className="mb-4">
-          <Link href="/dashboard" className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">← Back to Dashboard</Link>
-        </div>
-        <h1 className="text-2xl font-bold mb-4">Your Profile</h1>
-        {error && <div className="mb-2 text-red-600">{error}</div>}
-        {success && <div className="mb-2 text-green-600">{success}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block mb-1" htmlFor="name">Name</label>
+    <div className={styles.profilePage}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>My Profile</h1>
+        {error && <div className={styles.error}>{error}</div>}
+        {success && <div className={styles.success}>{success}</div>}
+        <form onSubmit={handleSave}>
+          <div className={styles.avatarContainer}>
+            <label htmlFor="profilePicInput" className={styles.avatarLabel}>
+              {profile.profilePic ? (
+                <img
+                  src={profile.profilePic}
+                  alt="Profile Preview"
+                  className={styles.avatarImage}
+                />
+              ) : (
+                <div className={styles.avatarPlaceholder}>Add Photo</div>
+              )}
+            </label>
             <input
-              className="w-full border px-3 py-2 rounded"
+              id="profilePicInput"
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleProfilePicChange}
+            />
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="name">Name</label>
+            <input
               type="text"
               id="name"
-              value={name}
-              onChange={e => setName(e.target.value)}
+              value={profile.name}
+              onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="block mb-1" htmlFor="email">Email</label>
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="email">Email</label>
             <input
-              className="w-full border px-3 py-2 rounded bg-gray-100"
               type="email"
               id="email"
-              value={email}
+              value={profile.email}
               readOnly
               disabled
+              className={styles.readOnly}
             />
           </div>
-          <div className="mb-6">
-            <label className="block mb-1" htmlFor="password">New Password (optional)</label>
-            <input
-              className="w-full border px-3 py-2 rounded"
-              type="password"
-              id="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Leave blank to keep current password"
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={profile.description}
+              onChange={e => setProfile(p => ({ ...p, description: e.target.value }))}
+              rows={3}
             />
           </div>
-          <button
-            className="w-full bg-blue-600 text-white py-2 rounded"
-            type="submit"
-            disabled={saving}
-          >
+
+          <button type="submit" className={styles.saveButton} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
       </div>
     </div>
   );
-} 
+}

@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const { name, password } = req.body;
+  const { name, password, description, profilePic } = req.body;
   if (!name) {
     return res.status(400).json({ message: 'Name is required' });
   }
@@ -26,6 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (password) {
     update.password = await hash(password, 10);
   }
+  if (typeof description === 'string') {
+    update.description = description;
+  }
+  if (typeof profilePic === 'string') {
+    update.profilePic = profilePic;
+  }
   await users.updateOne({ email: session.user.email }, { $set: update });
-  return res.status(200).json({ message: 'Profile updated', name, email: session.user.email });
+  return res.status(200).json({ message: 'Profile updated', name, email: session.user.email, description, profilePic });
 } 

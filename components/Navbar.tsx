@@ -1,5 +1,5 @@
 // components/Navbar.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from '../styles/Navbar.module.scss';
 import { useRouter } from 'next/router';
@@ -7,7 +7,26 @@ import { useRouter } from 'next/router';
 export default function Navbar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profile, setProfile] = useState({ name: '', email: '', description: '', profilePic: '' });
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    if (userEmail) {
+      fetch('/api/user/me').then(res => res.json()).then(data => {
+        setProfile({
+          name: data.name || '',
+          email: data.email || '',
+          description: data.description || '',
+          profilePic: data.profilePic || '',
+        });
+      });
+    }
+  }, [userEmail, router.asPath]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -17,6 +36,56 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
     if (e.key === 'Enter' && searchValue.trim()) {
       router.push(`/explore?query=${encodeURIComponent(searchValue.trim())}`);
     }
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProfilePicFile(e.target.files[0]);
+      // Show preview
+      setProfile(p => ({ ...p, profilePic: URL.createObjectURL(e.target.files![0]) }));
+    }
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError('');
+    setProfileSuccess('');
+    let profilePicUrl = profile.profilePic;
+    if (profilePicFile) {
+      const formData = new FormData();
+      formData.append('profilePic', profilePicFile);
+      const res = await fetch('/api/user/upload-profile-pic', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        profilePicUrl = data.url;
+      } else {
+        setProfileError(data.message || 'Failed to upload profile picture');
+        setSaving(false);
+        return;
+      }
+    }
+    // Save profile
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: profile.name,
+        description: profile.description,
+        profilePic: profilePicUrl,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setProfileSuccess('Profile updated!');
+      setShowProfileModal(false);
+    } else {
+      setProfileError(data.message || 'Failed to update profile');
+    }
+    setSaving(false);
   };
 
   return (
@@ -64,13 +133,16 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
             
             {userEmail ? (
               <div className={styles.userSection}>
-                <div className={styles.userAvatar}>
-                  <span className={styles.userInitial}>
-                    {userEmail.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <Link href="/profile" className={styles.userAvatar} style={{ cursor: 'pointer' }}>
+                  {profile.profilePic ? (
+                    <img src={profile.profilePic} alt="Profile" className={styles.profilePicImg} />
+                  ) : (
+                    <span className={styles.userInitial}>
+                      {userEmail.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </Link>
                 <div className={styles.userMenu}>
-                  <div className={styles.userEmail}>{userEmail}</div>
                   <button onClick={onLogout} className={styles.logoutBtn}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -80,6 +152,36 @@ export default function Navbar({ userEmail, onLogout }: { userEmail?: string; on
                     Logout
                   </button>
                 </div>
+                {showProfileModal && (
+                  <div className={styles.profileModalOverlay} onClick={() => setShowProfileModal(false)}>
+                    <div className={styles.profileModal} onClick={e => e.stopPropagation()}>
+                      <h2>Edit Profile</h2>
+                      {profileError && <div className={styles.profileError}>{profileError}</div>}
+                      {profileSuccess && <div className={styles.profileSuccess}>{profileSuccess}</div>}
+                      <form onSubmit={handleProfileSave}>
+                        <div className={styles.profilePicEditSection}>
+                          <label htmlFor="profilePicInput">
+                            {profile.profilePic ? (
+                              <img src={profile.profilePic} alt="Profile Preview" className={styles.profilePicPreview} />
+                            ) : (
+                              <div className={styles.profilePicPlaceholder}>Add Photo</div>
+                            )}
+                          </label>
+                          <input id="profilePicInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleProfilePicChange} />
+                        </div>
+                        <div className={styles.profileField}>
+                          <label>Name</label>
+                          <input type="text" value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} required />
+                        </div>
+                        <div className={styles.profileField}>
+                          <label>Description</label>
+                          <textarea value={profile.description} onChange={e => setProfile(p => ({ ...p, description: e.target.value }))} />
+                        </div>
+                        <button type="submit" className={styles.profileSaveBtn} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className={styles.authButtons}>

@@ -1,5 +1,7 @@
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import styles from '../styles/explore.module.scss';
 
 interface Repo {
   id: string;
@@ -28,14 +30,15 @@ const ExplorePage = () => {
       setRepoResults([]);
       return;
     }
+
     setLoading(true);
-    // Fetch users matching the query
+
     fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
       .then(res => res.json())
       .then(data => {
         setUsers(data.users || []);
       });
-    // Fetch repositories matching the query using the new endpoint
+
     fetch(`/api/repos/search?q=${encodeURIComponent(query)}`)
       .then(res => res.json())
       .then(data => {
@@ -45,45 +48,86 @@ const ExplorePage = () => {
   }, [query]);
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Explore</h1>
-      {query ? (
-        <>
-          <p>Showing results for: <strong>{query}</strong></p>
-          {loading && <p>Loading...</p>}
-          {!loading && (
-            <>
-              <h2>Users</h2>
-              {users.length === 0 && <p>No users found.</p>}
-              <ul>
-                {users.map(user => (
-                  <li key={user.email} style={{ marginBottom: '1rem' }}>
-                    <strong>{user.name}</strong> ({user.email})
-                    {user.repos.length > 0 && (
-                      <ul>
-                        {user.repos.map(repo => (
-                          <li key={repo.id}><strong>{repo.name}</strong>: {repo.description}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <h2>Repositories</h2>
-              {repoResults.length === 0 && <p>No repositories found.</p>}
-              <ul>
-                {repoResults.map(repo => (
-                  <li key={repo.id}><strong>{repo.name}</strong> (Owner: {repo.ownerName}){repo.description ? `: ${repo.description}` : ''}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      ) : (
-        <p>Type a search query in the navbar above.</p>
-      )}
+    <div className={styles.explorePage}>
+      <div className={styles.container}>
+        <h1 className={styles.title}>Explore</h1>
+
+        {query ? (
+          <>
+            <p className={styles.queryText}>
+              Showing results for: <strong>{query}</strong>
+            </p>
+
+            {loading && <div className={styles.loading}>Loading...</div>}
+
+            {!loading && (
+              <>
+                <section className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Users</h2>
+                  {users.length === 0 ? (
+                    <p className={styles.emptyState}>No users found.</p>
+                  ) : (
+                    <ul className={styles.cardList}>
+                      {users.map(user => (
+                        <li key={user.email} className={styles.card}>
+                          <div className={styles.userHeader}>
+                            <strong className={styles.userName}>{user.name}</strong>
+                            <span className={styles.userEmail}>({user.email})</span>
+                          </div>
+
+                          {user.repos.length > 0 ? (
+                            <ul className={styles.repoList}>
+                              {user.repos.map(repo => (
+                                <li key={repo.id} className={styles.repoItem}>
+                                  <Link href={`/public/${repo.id}`} className={styles.repoLink}>
+                                    {repo.name}
+                                  </Link>
+                                  {repo.description && (
+                                    <span className={styles.repoDesc}>: {repo.description}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className={styles.emptyRepos}>No public repositories</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Repositories</h2>
+                  {repoResults.length === 0 ? (
+                    <p className={styles.emptyState}>No repositories found.</p>
+                  ) : (
+                    <ul className={styles.cardList}>
+                      {repoResults.map(repo => (
+                        <li key={repo.id} className={styles.card}>
+                          <Link href={`/public/${repo.id}`} className={styles.repoLink}>
+                            <strong>{repo.name}</strong>
+                          </Link>
+                          <span className={styles.repoMeta}>
+                            {' '} (Owner: {repo.ownerName})
+                          </span>
+                          {repo.description && (
+                            <p className={styles.repoDesc}>{repo.description}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </>
+            )}
+          </>
+        ) : (
+          <p className={styles.emptyState}>Type a search query in the navbar above.</p>
+        )}
+      </div>
     </div>
   );
 };
 
-export default ExplorePage; 
+export default ExplorePage;

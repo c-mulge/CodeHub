@@ -64,6 +64,8 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const reposPerPage = 10;
 
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
   const filteredRepos = repos.filter(repo =>
     repo.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -78,6 +80,14 @@ export default function Dashboard() {
       fetchActivity();
     }
   }, [status, router]);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch('/api/user/me').then(res => res.json()).then(data => {
+        setProfilePic(data.profilePic || null);
+      });
+    }
+  }, [session?.user?.email, router.asPath]);
 
   const fetchRepos = async () => {
     setLoadingRepos(true);
@@ -216,23 +226,8 @@ export default function Dashboard() {
       
       <div className={styles.container}>
         <div className={styles.header}>
-          <Link href="/" className={styles.backButton}>
-            <span>←</span>
-            <span>Back to Home</span>
-          </Link>
-          
           <h1 className={styles.title}>Dashboard</h1>
-          
-          {session && (
-            <div className={styles.userInfo}>
-              <p className={styles.userEmail}>
-                Logged in as: <span className={styles.emailHighlight}>{session.user?.email}</span>
-              </p>
-              <button onClick={handleLogout} className={styles.logoutButton}>
-                Sign Out
-              </button>
-            </div>
-          )}
+          {session && null}
         </div>
 
         <div className={styles.mainContent}>
